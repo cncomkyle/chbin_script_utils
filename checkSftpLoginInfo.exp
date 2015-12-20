@@ -1,0 +1,37 @@
+#!/usr/bin/expect
+
+
+set user_name [lindex $argv 0]
+set user_pwd [lindex $argv 1]
+
+set prompt_str "sftp>"
+
+log_user 0
+
+spawn sftp $user_name@sha-vde-store5:/$user_name
+
+expect {
+    denied {
+        send_error "The login user name and pwd maybe wrong!\n"
+        exit 1
+    }
+    assword: {
+        send "$user_pwd\r"
+        exp_continue
+    }
+    timeout {
+        send_error "Cannot wait any longer! Input the login info!\n"
+        exit 1
+    }
+    eof {
+        send_error "Connection Failed!\n"
+        exit 1
+    }
+    $prompt_str {
+        send_user "Login user and pwd matched!\n"
+        exit 0
+    }
+}
+
+send_user "exit unnormally!\n"
+exit 1

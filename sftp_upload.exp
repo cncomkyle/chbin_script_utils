@@ -1,0 +1,52 @@
+#!/usr/bin/expect
+
+set user_name [lindex $argv 0]
+set user_pwd [lindex $argv 1]
+set upload_file_name [lindex $argv 2]
+
+set sftp_server "sha-vde-store5"
+set prompt "sftp>"
+
+proc putFile {fileName} {
+    set local_flg 0
+    send_user "upload file is $fileName\n"
+    while 1 {
+        expect {
+            "sftp>" {
+
+                if { $local_flg == 1} {
+                    send_user "Finish upload file $fileName\n"
+                    send "\r"
+                    set local_flg 0
+                    return 0
+                }
+                send_user "Begin upload file $fileName\n"
+                send "put $fileName\r"
+                set local_flg 1
+                
+            }
+            -re "(.*)\n" {
+                
+            }
+        }
+    }
+}
+
+
+log_user 0
+stty -echo
+
+spawn  sftp $user_name@sha-vde-store5:/$user_name
+
+expect "assword"
+send "$user_pwd\r"
+
+putFile "$upload_file_name"
+
+expect "sftp>"
+send "bye\r"
+
+expect "sftp>"
+exit
+
+

@@ -1,0 +1,14 @@
+#!/bin/bash
+
+#Desc: include all function about sftp;
+#Author : chbin
+#Date: Sun Dec 13 20:58:02 CST 2015
+
+export shell_util_dir="/Users/chbin/.chbin_script_utils"
+
+for i in ${shell_util_dir}/*.sh
+do
+    printf "%s\n" "${i}"
+    . $i 
+done
+
