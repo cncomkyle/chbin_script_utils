@@ -4,7 +4,15 @@
 #Author : chbin
 #Date: Sun Dec 13 20:58:02 CST 2015
 
-export shell_util_dir="/Users/chbin/.chbin_script_utils"
+# export shell_util_dir="/Users/chbin/.chbin_script_utils"
+
+# printf "9 is %s\n" "$0"
+
+# shell_dir=$(cd $(dirname $0);pwd)
+
+# printf "%s\n" "${shell_util_dir}"
+
+shell_util_dir="$HOME/.chbin_script_utils"
 
 for i in ${shell_util_dir}/*.sh
 do
