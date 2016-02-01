@@ -139,3 +139,15 @@ function color_sed()
         awk '{cmd="echo  \""$0"\"";system(cmd);close(cmd)}'
     done
 }
+
+function remove_color()
+{
+    local ESC="`echo -e '\033'`"
+    local ES1="${ESC}""\[""[0-9][0-9]*[;0123456789]*m"
+
+    while read -r tmp_line
+    do
+        printf "%s\n" "${tmp_line}" | \
+        sed -n -e "s/${ES1}//g;p;" 
+    done
+}
