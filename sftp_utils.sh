@@ -23,7 +23,7 @@ function getsftpLoginInfo()
         sftp_user_pwd="${sftp_user_pwd_local}"
 
         # check the login info with the expect
-        cd "${shell_dir_util}";expect checkSftpLoginInfo.exp "${sftp_user_name_local}" "${sftp_user_pwd_local}"
+        cd "${shell_util_dir}";expect checkSftpLoginInfo.exp "${sftp_user_name_local}" "${sftp_user_pwd_local}"
 
         if [ "$?" -gt 0 ]
         then

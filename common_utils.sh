@@ -78,3 +78,28 @@ function getMvnDep()
 {
     mvn dependency:build-classpath 2>&1 | sed -n -e '/\.jar/p' | sed -n -e '/http:/!p' |  awk -F ':' '{for(i=1;i<=NF;i++)print$i}'
 }
+
+function getExportFuncList()
+{
+    local shell_file_path="$1"
+
+    if [ -z "${shell_file_path}" ]
+    then
+        printf "Please input the shell file path!\n"
+        exit 1
+    fi
+
+    if [ ! -e "${shell_file_path}" ]
+    then
+        printf "The shell file path doesnot exist!\n"
+        exit 1
+    fi
+
+    cat "${shell_file_path}" | \
+    sed -n -e '/^function/p'  | \
+    awk '{print $NF}' | \
+    sed -n -e 's/()//g;p;' | \
+    awk '{printf"export -f %s\n",$0}'
+}
+
+

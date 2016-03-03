@@ -8,6 +8,8 @@ bold_magenta_color="\033[1;35m"
 bold_cyan_color="\033[1;30;48;5;85m"
 bold_gray_color="\033[1;90m"
 
+light_magenta_color="\033[95m"
+
 bold_white_red_color="\033[1;97;5;41m"
 bold_yellow_blue_color="\033[1;33;104m"
 color_end_str="\033[0m"
@@ -45,8 +47,10 @@ function regMatchCheck()
 
     if [ -n "${checkRlt}" ]
     then
+        printf "1\n"
         return 0
     else
+        printf "0\n"
         return 1
     fi
 }
@@ -86,11 +90,15 @@ function is_xml_line()
 {
     local chk_str="$1"
     local pattern_str="$2"
+    printf "%s\n" $(regMatchCheck "${chk_str}" "${pattern_str}")
+    return 0
 
     local chk_rlt=$(printf "%s\n" "${chk_str}" | awk '{if($0~p_str){printf"%s\n","1"}else{printf"%s\n","0"}}' p_str="${pattern_str}")
 
     printf "%s\n" "${chk_rlt}"
 }
+
+
 function get_split_lines()
 {
     local single_line="$1"
@@ -100,6 +108,7 @@ function get_split_lines()
     awk -F ''"${split_str}"'' '{for(i=1;i<=NF;i++)print $i}' | \
     sed -n -e '/^$/d;p;'
 }
+
 function xml_format_log_string()
 {
     local tmp_log_str="$1"
@@ -142,6 +151,41 @@ function xml_format_log_string()
 
 }
 
+function macro_xml_end_check()
+{
+    if [ "$(is_xml_line "${log_string}" "${tmp_xml_end}")" = "1" ]
+    then
+        pre_log_str=$(printf "%s\n%s\n" "${pre_log_str}" "${log_string}" | sed -n -e '/^$/d;p;')
+        pre_log_str=$(xml_format_log_string "${pre_log_str}")
+        pre_log_str=$(getColorStr "${bold_cyan_color}" "${pre_log_str}")
+        printf "%b\n" "${pre_log_str}"
+        find_xml_flg="0"
+        pre_log_str=""
+    else
+        if [ -z "${pre_log_str}" ]
+        then
+            pre_log_str="${log_string}"
+        else
+            pre_log_str=$(printf "%s\n%s\n" "${pre_log_str}" "${log_string}")
+        fi 
+    fi
+}
+
+function macro_print_log_line()
+{
+    find_xml_flg=$(is_xml_line "${log_string}" "${tmp_xml_start}")
+
+    if [ "${find_xml_flg}" = "0" ]
+    then
+        # false
+        log_string=$(getColorStr "${bold_cyan_color}" "${log_string}")
+        printf "%b\n" "${log_string}"
+    else
+        # true
+        eval "macro_xml_end_check"
+    fi
+
+}
 
 function color_log_line()
 {
@@ -156,83 +200,56 @@ function color_log_line()
            
             ## valid format log msg
             log_thread=$(getColorStr "${bold_gray_color}" "${log_thread}")
-            log_date_time=$(getColorStr "${bold_blue_color}" "${log_date} ${log_time}")
+            log_date_time=$(getColorStr "${light_magenta_color}" "${log_date} ${log_time}")
             log_class_method="$(color_class_method "${log_class_method}")"
             log_line=$(getColorStr "${bold_magenta_color}" "${log_line_start} ${log_line_end}")
 
-            printf "\n%b %b %b %b %b\n" "${new_log_level}" "${log_thread}" "${log_date_time}"  "${log_class_method}" "${log_line}"            
+            printf "%b %b %b %b %b\n" "${new_log_level}" "${log_thread}" "${log_date_time}"  "${log_class_method}" "${log_line}"            
             # check log_string whether contain xml head
-            find_xml_flg=$(is_xml_line "${log_string}" "${tmp_xml_start}")
-
-            if [ "${find_xml_flg}" = "0" ]
-            then
-                # false
-                log_string=$(getColorStr "${bold_cyan_color}" "${log_string}")
-                printf "%b\n" "${log_string}"
-            else
-                # true
-                if [ "$(is_xml_line "${log_string}" "${tmp_xml_end}")" = "1" ]
-                then
-                    pre_log_str=$(xml_format_log_string "${log_string}")
-                    pre_log_str=$(getColorStr "${bold_cyan_color}" "${pre_log_str}")
-                    printf "%b\n" "${pre_log_str}"
-                    find_xml_flg="0"
-                    pre_log_str=""
-                else
-                    pre_log_str="${log_string}"
-                fi
-
-            fi
+            eval "macro_print_log_line"
         else
             log_string="${log_level} ${log_thread} ${log_date} ${log_time} ${log_class_method} ${log_line_start} ${log_line_end} ${log_string}"
 
             if [ "${find_xml_flg}" = "1" ]
             then
-                if [ "$(is_xml_line "${log_string}" "${tmp_xml_end}")" = "1" ]
-                then
-                    pre_log_str=$(printf "%s\n%s\n" "${pre_log_str}" "${log_string}")
-                    pre_log_str=$(xml_format_log_string "${pre_log_str}")
-                    pre_log_str=$(getColorStr "${bold_cyan_color}" "${pre_log_str}")
-                    printf "%b\n" "${pre_log_str}"
-                    find_xml_flg="0"
-                    pre_log_str=""
-                else
-                    if [ -z "${pre_log_str}" ]
-                    then
-                        pre_log_str="${log_string}"
-                    else
-                        pre_log_str=$(printf "%s\n%s\n" "${pre_log_str}" "${log_string}")
-                    fi 
-
-                fi
+                eval "macro_xml_end_check"
             else
-                find_xml_flg=$(is_xml_line "${log_string}" "${tmp_xml_start}")
+                eval "macro_print_log_line"
+            fi
+        fi
+    done
+}
 
-                if [ "${find_xml_flg}" = "0" ]
-                then
-                    # false
-                    log_string=$(getColorStr "${bold_cyan_color}" "${log_string}")
-                    printf "%b\n" "${log_string}"
-                else
-                    # true
-                    if [ "$(is_xml_line "${log_string}" "${tmp_xml_end}")" = "1" ]
-                    then
-                        pre_log_str=$(xml_format_log_string "${log_string}")
-                        pre_log_str=$(getColorStr "${bold_cyan_color}" "${pre_log_str}")
-                        printf "%b\n" "${pre_log_str}"
-                        find_xml_flg="0"
-                        pre_log_str=""
-                    else
 
-                        if [ -z "${pre_log_str}" ]
-                        then
-                            pre_log_str="${log_string}"
-                        else
-                            pre_log_str=$(printf "%s\n%s\n" "${pre_log_str}" "${log_string}")
-                        fi 
+function color_log_line_new()
+{
+    local pre_log_str=""
+    local find_xml_flg="0"
+    while read -r log_level log_category log_thread log_date log_time log_class_method log_line_start log_line_end log_string
+    do
+        new_log_level=$(color_log_level "${log_level}")
+       
+        if [ -n "${new_log_level}" ]
+        then
+           
+            ## valid format log msg
+            log_category=$(getColorStr "${light_magenta_color}" "${log_category}")
+            log_thread=$(getColorStr "${bold_gray_color}" "${log_thread}")
+            log_date_time=$(getColorStr "${light_magenta_color}" "${log_date} ${log_time}")
+            log_class_method="$(color_class_method "${log_class_method}")"
+            log_line=$(getColorStr "${bold_magenta_color}" "${log_line_start} ${log_line_end}")
 
-                    fi
-                fi
+            printf "%b %b %b %b %b %b\n" "${new_log_level}" "${log_category}" "${log_thread}" "${log_date_time}"  "${log_class_method}" "${log_line}"            
+            # check log_string whether contain xml head
+            eval "macro_print_log_line"
+        else
+            log_string="${log_level} ${log_category} ${log_thread} ${log_date} ${log_time} ${log_class_method} ${log_line_start} ${log_line_end} ${log_string}"
+
+            if [ "${find_xml_flg}" = "1" ]
+            then
+                eval "macro_xml_end_check"
+            else
+                eval "macro_print_log_line"
             fi
         fi
     done
@@ -299,6 +316,20 @@ function color_log()
     fi
 }
 
+
+function cat_log()
+{
+    local log_file_path="$1"
+
+    if [ -n "${log_file_path}" ]
+    then
+        cat "${log_file_path}" | \
+        color_log_line
+    else
+        color_log_line
+    fi
+}
+
 function color_sed()
 {
     local reg_pattern_str="$1"
@@ -306,7 +337,8 @@ function color_sed()
     then
         return 0
     fi
-    
+
+    # printf "%s\n" "${reg_pattern_str}"
     while read -r tmp_line
     do
         # printf "%s\n" "${tmp_line}" | \
@@ -315,13 +347,22 @@ function color_sed()
         #     p;
         # }' | \
         # awk '{cmd="printf \"%b\\n\"  \""$0"\"";system(cmd);close(cmd)}'
-        
+        # tmp_rlt_list=$(printf "%s\n" "${tmp_line}" | \
+        # sed -n -e '/'"${reg_pattern_str}"'/{
+        #     s/.*\('"${reg_pattern_str}"'\).*/&&\1/g;
+        #     p;
+        # }' | sort | uniq)
 
-        tmp_rlt=$(printf "%s\n" "${tmp_line}" | \
-        sed -n -e '/'"${reg_pattern_str}"'/{
-            s/'"${reg_pattern_str}"'/'$(getColorStr "${sed_bold_white_red_color}" "${reg_pattern_str}" "${sed_color_end_str}")'/g;
-            p;
-        }')
+
+
+        tmp_rlt=$(
+            printf "%s\n" "${tmp_line}" | \
+            sed -n -e '/'"${reg_pattern_str}"'/{
+                s/\('"${reg_pattern_str}"'\)/'$(getColorStr "${sed_bold_white_red_color}" "\1" "${sed_color_end_str}")'/g;
+                p;
+            }'
+        )
+
         if [ -n "${tmp_rlt}" ] 
         then
             echo -e "${tmp_rlt}"
@@ -341,3 +382,20 @@ function remove_color()
         sed -n -e "s/${ES1}//g;p;" 
     done
 }
+
+# export section : used to export these function
+export -f getColorStr
+export -f regMatchCheck
+export -f color_log_level
+export -f color_class_method
+export -f is_xml_line
+export -f get_split_lines
+export -f xml_format_log_string
+export -f macro_xml_end_check
+export -f macro_print_log_line
+export -f color_log_line
+export -f color_log_line_old
+export -f color_log
+export -f cat_log
+export -f color_sed
+export -f remove_color
