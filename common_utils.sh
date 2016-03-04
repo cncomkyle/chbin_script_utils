@@ -86,13 +86,13 @@ function getExportFuncList()
     if [ -z "${shell_file_path}" ]
     then
         printf "Please input the shell file path!\n"
-        exit 1
+        return 1
     fi
 
     if [ ! -e "${shell_file_path}" ]
     then
         printf "The shell file path doesnot exist!\n"
-        exit 1
+        return 1
     fi
 
     cat "${shell_file_path}" | \
@@ -103,3 +103,24 @@ function getExportFuncList()
 }
 
 
+function getPIDInfo()
+{
+    local tmp_pid="$1"
+
+    if [ -z "${tmp_pid}" ]  
+    then
+        printf "Please input the search pid value!\n"
+        return 0
+    fi
+    
+    local tmp_rlt=$(
+        ps -ef 2>&1 | \
+        awk '{if($2~chk_pid)print $0}' chk_pid="${tmp_pid}" | \
+        awk '{for(i=1;i<=NF;i++){if(i>=8)print $i}}' | \
+        awk -F ':' '{for(i=1;i<=NF;i++)print $i}' | \
+        color_file_path
+    )
+
+    printf "%b\n" "${tmp_rlt}"
+
+}

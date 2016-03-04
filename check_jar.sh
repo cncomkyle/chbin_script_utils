@@ -37,7 +37,7 @@ function findJPSJar_old()
     if [ -z "${classNmPattern}" ]
     then
         printf "Please input the search class name pattern value!\n"
-        exit 1
+        return 1
     fi
     
     ps -ef 2>&1 | \
@@ -62,7 +62,7 @@ function findJPSJar()
     if [ -z "${classNmPattern}" ]
     then
         printf "Please input the search class name pattern value!\n"
-        exit 1
+        return 1
     fi
     
     local pid_info_list=$(
@@ -91,7 +91,7 @@ function findJPSJar()
             xargs -n1 -I{} bash -c "getJarContent {}" | \
             sed -n -e '/'${classNmPattern}'/p' | \
             color_sed ${classNmPattern} | \
-            color_sed "[^\/][^\/]*\.jar" | \
+            color_file_path | \
             awk '{printf"#%d. %s\n",FNR,$0;}'
         )
         
@@ -103,14 +103,36 @@ function findJPSJar()
         local tmp_pid_cwd=$(lsof -p "${tmp_pid}" | awk '{if($4~/cwd/)print $NF}')
         local tmp_pid_exe=$(printf "%s\n" "${tmp_pid_info}" | awk '{print $8}')
 
-        printf "%b %b %b\n%s\n" "$(getColorStr ${bold_white_red_color} ${tmp_pid})" "$(getColorStr ${bold_magenta_color} ${tmp_pid_cwd})" "$(getColorStr ${bold_cyan_color} ${tmp_pid_exe})" "${tmp_rlt}"
+        printf "%b %b %b\n%b\n" "$(getColorStr ${bold_yellow_color} ${tmp_pid})" "$(getColorStr ${bold_magenta_color} ${tmp_pid_cwd})" "$(getColorStr ${bold_cyan_color} ${tmp_pid_exe})" "${tmp_rlt}"
     done <<< "${pid_info_list}"
 
+}
+
+function getJPIDJars()
+{
+    local tmp_jpid="$1"
+    if [ -z "${tmp_jpid}" ]  
+    then
+        printf "Please input the check java pid\n"
+        return 1
+    fi
+
+    local tmp_rlt=$(
+        lsof -p "${tmp_jpid}" | \
+        sed -n -e '/\.jar$/p' | \
+        awk '{print $NF}' | \
+        sort | \
+        uniq | \
+        color_file_path
+    )
+    
+    printf "%b\n" "${tmp_rlt}"
 }
 
 export -f getJarContent
 export -f findJarClass
 export -f findJPSJar
+export -f getJPIDJars
 
 # function main()
 # {

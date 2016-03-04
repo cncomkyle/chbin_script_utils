@@ -15,6 +15,7 @@ bold_yellow_blue_color="\033[1;33;104m"
 color_end_str="\033[0m"
 
 sed_bold_white_red_color="\\\033[1;97;41m"
+sed_light_magenta_color="\\\033[95m"
 sed_color_end_str="\\\033[0m"
 
 tmp_xml_start='<?xml version="1.0" encoding='
@@ -383,6 +384,25 @@ function remove_color()
     done
 }
 
+function color_file_path()
+{
+    while read -r tmp_file_path
+    do
+            
+        # if [ ! -e "${tmp_file_path}" ]
+        # then
+        #     printf "%s\n" "${tmp_file_path}"
+        #     continue
+        # fi
+    
+        printf "%s\n" "${tmp_file_path}" | \
+        sed -n -e 's/\([^\/][^\/]*\.jar\)/'"$(getColorStr ${sed_bold_white_red_color} "\1" "${sed_color_end_str}")"'/g;p;' | \
+        sed -n -e 's/\(\/\)/'"$(getColorStr ${sed_light_magenta_color} "\1" "${sed_color_end_str}")"'/g;p;' 
+    done
+
+
+}
+
 # export section : used to export these function
 export -f getColorStr
 export -f regMatchCheck
@@ -399,3 +419,4 @@ export -f color_log
 export -f cat_log
 export -f color_sed
 export -f remove_color
+export -f color_file_path
