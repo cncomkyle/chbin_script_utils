@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#===global var area==========
 bold_red_color="\033[1;31m"
 bold_white_color="\033[1;97m"
 bold_yellow_color="\033[1;33m"
@@ -21,6 +21,7 @@ sed_color_end_str="\\\033[0m"
 tmp_xml_start='<?xml version="1.0" encoding='
 tmp_xml_end="<\/[^\/][^\/]*:Envelope>"
 
+#===function methods==========
 function getColorStr()
 {
     local color_value="$1"
@@ -399,11 +400,72 @@ function color_file_path()
         sed -n -e 's/\([^\/][^\/]*\.jar\)/'"$(getColorStr ${sed_bold_white_red_color} "\1" "${sed_color_end_str}")"'/g;p;' | \
         sed -n -e 's/\(\/\)/'"$(getColorStr ${sed_light_magenta_color} "\1" "${sed_color_end_str}")"'/g;p;' 
     done
+}
 
+function getColorVarList()
+{
+    # set -x
+    local tmp_color_var_list=$(
+        cat "${shell_util_dir}/color_output.sh" | \
+        sed -n -e '/="[^m][^m]*m"$/p' | \
+        sed -n -e '/[[:blank:]]/!p'
+    )
+
+    local tmp_no=1;
+    local l_print_fmt="%-4s%-30s%-30s\n"
+    
+    # print header string
+    local l_header_line=$(printf "${l_print_fmt}" "No." "Color_Name." "Color_Value." | \
+    sed -n -e 's/\([a-zA-Z_\.][a-zA-Z\.]*\)/\'"$(getColorStr "${bold_cyan_color}" "\1" "${sed_color_end_str}")"'/g;p;' )
+
+    printf "%b\n" "${l_header_line}"
+
+    printf "$(printf "%s\n" "${l_print_fmt}" | sed -n -e 's/-/0/g;p;')" " " " " " " | sed -n -e 's/0/=/g;p;'
+
+    # print color list
+    while IFS="=" read -r tmp_color_var_name tmp_color_var_value
+    do
+        tmp_out_color_var_value=$(printf "%s\n" "${tmp_color_var_value}" | sed -n -e 's/"//g;p;' | sed -n -e 's/\\/#/g;p;')
+        tmp_line_color=$(printf "%s\n" "${tmp_color_var_value}" | sed -n -e 's/"//g;p;' | sed -n -e 's/\\//g;p;')
+
+        # 1. format it in printf firstly, thne use sed to add the color attribute
+        tmp_line_str=$(
+            printf "${l_print_fmt}" "${tmp_no}." "${tmp_color_var_name}" "${tmp_out_color_var_value}" | \
+            sed -n -e 's/\([a-zA-Z_]*color[a-zA-Z_]*\)/\\'"$(getColorStr ${tmp_line_color} "\1" "${sed_color_end_str}")"'/g;p;'
+        )
+        
+        printf "%b\n" "${tmp_line_str}" | sed -n -e 's/#/\\/g;p;'
+
+        printf "$(printf "%s\n" "${l_print_fmt}" | sed -n -e 's/-/0/g;p;')" " " " " " " | sed -n -e 's/0/-/g;p;'
+
+        let tmp_no=$tmp_no+1
+
+    done <<< "${tmp_color_var_list}"
 
 }
 
-# export section : used to export these function
+function getColorVarList_old()
+{
+    # set -x
+    local tmp_color_var_list=$(
+        cat "${shell_util_dir}/color_output.sh" | \
+        sed -n -e '/="[^m][^m]*m"$/p' | \
+        sed -n -e '/[[:blank:]]/!p'
+    )
+
+    local tmp_no=1;
+    while IFS="=" read -r tmp_color_var_name tmp_color_var_value
+    do
+        tmp_color_var_value=$(printf "%s\n" "${tmp_color_var_value}" | sed -n -e 's/"//g;p;')
+        tmp_color_var_name=$(printf "%b\n" "${tmp_color_var_value}${tmp_color_var_name}${color_end_str}" | sed -n -e 's/\\//g;p;')
+        
+        printf "%-4s%-30s%-30b\n" "${tmp_no}" "${tmp_color_var_value}" "${tmp_color_var_name}" 
+        let tmp_no=$tmp_no+1
+    done <<< "${tmp_color_var_list}"
+
+}
+
+#=== export section : used to export these function==========
 export -f getColorStr
 export -f regMatchCheck
 export -f color_log_level
