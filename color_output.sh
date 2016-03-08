@@ -111,10 +111,72 @@ function get_split_lines()
     sed -n -e '/^$/d;p;'
 }
 
+
+function highlight_xml_str()
+{
+    local tmp_origin_xml_str="$1"
+
+    while IFS='' read -r tmp_xml_line
+    do
+
+        if regMatchCheck "${tmp_xml_line}" "<[^\/][^\/]*:DeviceId\/>" > /dev/null
+        then
+            local tmp_out_xml_line=$(printf "%s%s%s\n" "${bold_blue_color}" "${tmp_xml_line}" "${color_end_str}")
+        elif regMatchCheck "${tmp_xml_line}" "<[^\/][^\/]*:DeviceId>" > /dev/null
+        then
+            local tmp_out_xml_line=$(printf "%s\n" "${tmp_xml_line}" | \
+sed -n -e 's/\(<[^\/][^\/]*:DeviceId>\)\([^<][^<]*\)\(<\/[^\/][^\/]*:DeviceId>\)/\'"$(getColorStr "${bold_blue_color}" "\1" "${sed_color_end_str}")"'\'"$(getColorStr "${bold_gray_color}" "\2" "${sed_color_end_str}")"'\'"$(getColorStr "${bold_blue_color}" "\3" "${sed_color_end_str}")"'/g;p;')
+        else
+            local tmp_out_xml_line=$(printf "%s%s%s\n" "${bold_magenta_color}" "${tmp_xml_line}" "${color_end_str}")
+        fi
+
+        printf "%b\n" "$(get_split_lines "${tmp_out_xml_line}" "${sep_str}")"
+    done <<< "${tmp_origin_xml_str}"
+    
+    # printf "%s\n" "${tmp_origin_xml_str}" | \
+    # sed -n -e 's/\(<ch:DeviceId>.*<\/ch:DeviceId>\)/\'"$(getColorStr "${bold_blue_color}" "\1" "${sed_color_end_str}")"'/g;p;'
+}
+
+function xml_add_other_color()
+{
+    local tmp_highlight_xml_str="$1"
+    local tmp_add_bg_flg="1"
+    local tmp_color_end_reg_str="\\033\[0m"
+
+    while IFS=''  read -r tmp_xml_line
+    do
+        # check whether contain color escape string
+        local tmp_check_rlt=$(regMatchCheck "${tmp_xml_line}" "${tmp_color_end_reg_str}")
+
+        if [ "${tmp_check_rlt}" = "1" ]
+        then
+            # match
+            printf "%s%s\n" "${color_end_str}" "${tmp_xml_line}"
+            tmp_add_bg_flg="1"
+        else
+            # unmatch
+            if [ "${tmp_add_bg_flg}" = "1" ]
+            then
+                printf "%s%s\n"  "${bold_magenta_color}" "${tmp_xml_line}"
+                tmp_add_bg_flg="0"
+            else
+                printf "%s\n" "${tmp_xml_line}"
+            fi
+        fi
+        
+    done <<< "${tmp_highlight_xml_str}"
+
+    if [ "${tmp_add_bg_flg}" = "1" ]
+    then
+        printf "%s\n" "${color_end_str}"
+    fi
+
+}
+
 function xml_format_log_string()
 {
     local tmp_log_str="$1"
-    local sep_str="###"
+    sep_str="###"
     local xml_sep_str="@@@"
 
     if [ -z "${tmp_log_str}" ]
@@ -122,7 +184,10 @@ function xml_format_log_string()
         return 0
     fi
 
-    local combine_one_line=$(printf "%s\n" "${tmp_log_str}" | awk '{printf"%s%s",$0,sep_str}' sep_str="${sep_str}")
+    local combine_one_line=$(
+        printf "%s\n" "${tmp_log_str}" | \
+        awk '{printf"%s%s",$0,sep_str}' sep_str="${sep_str}"
+    )
 
     ## if doesn't include xml element, return immediately
     if [ $(is_xml_line "${combine_one_line}" "${tmp_xml_start}") = "0" ]
@@ -132,8 +197,12 @@ function xml_format_log_string()
         return 0
     fi
 
-
-    local tmp_xml_str=$(printf "%s\n" "${combine_one_line}" | sed -n -e 's/\(.*\)'"${tmp_xml_start}"'\(.*\)\('"${tmp_xml_end}"'\)\(.*\)/\1'"${xml_sep_str}${tmp_xml_start}"'\2\3'"${xml_sep_str}"'\4/g;p;' | sed -n -e 's/^'"${xml_sep_str}"'//g;p;' | awk -F ''${xml_sep_str}'' '{for(i=1;i<=NF;i++)print $i}')
+    local tmp_xml_str=$(
+        printf "%s\n" "${combine_one_line}" | \
+        sed -n -e 's/\(.*\)'"${tmp_xml_start}"'\(.*\)\('"${tmp_xml_end}"'\)\(.*\)/\1'"${xml_sep_str}${tmp_xml_start}"'\2\3'"${xml_sep_str}"'\4/g;p;' | \
+        sed -n -e 's/^'"${xml_sep_str}"'//g;p;' | \
+        awk -F ''${xml_sep_str}'' '{for(i=1;i<=NF;i++)print $i}'
+    )
 
     # printf "%s\n" "${tmp_xml_str}"
 
@@ -145,12 +214,19 @@ function xml_format_log_string()
 
         if [ "${check_rlt}" = "1"  ] 
         then
-            printf "%s\n" "$(get_split_lines "$(printf "%s\n" "$tmp_line" | xmllint --format -)" "${sep_str}")"
-        else
-            printf "%s\n" "$(get_split_lines "$tmp_line" "${sep_str}" )"
-        fi
-    done <<< "${tmp_xml_str}"
+            tmp_out_xml_str=$(printf "%s\n" "$tmp_line" | xmllint --format -)
+            # tmp_out_xml_str=$(highlight_xml_str "${tmp_out_xml_str}")
 
+            highlight_xml_str "${tmp_out_xml_str}"
+            # tmp_out_str=$(xml_add_other_color  "${tmp_out_xml_str}")
+            # tmp_out_str=$(get_split_lines "${tmp_out_str}" "${sep_str}")
+        else
+            tmp_out_str=$(getColorStr "${bold_cyan_color}" "$(get_split_lines "$tmp_line" "${sep_str}")")
+            printf "%b\n" "${tmp_out_str}"
+        fi
+
+
+    done <<< "${tmp_xml_str}"
 }
 
 function macro_xml_end_check()
@@ -158,9 +234,9 @@ function macro_xml_end_check()
     if [ "$(is_xml_line "${log_string}" "${tmp_xml_end}")" = "1" ]
     then
         pre_log_str=$(printf "%s\n%s\n" "${pre_log_str}" "${log_string}" | sed -n -e '/^$/d;p;')
-        pre_log_str=$(xml_format_log_string "${pre_log_str}")
-        pre_log_str=$(getColorStr "${bold_cyan_color}" "${pre_log_str}")
-        printf "%b\n" "${pre_log_str}"
+        xml_format_log_string "${pre_log_str}"
+        # pre_log_str=$(xml_format_log_string "${pre_log_str}")
+        # printf "%b\n" "${pre_log_str}"
         find_xml_flg="0"
         pre_log_str=""
     else
