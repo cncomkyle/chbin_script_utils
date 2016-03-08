@@ -1,0 +1,8 @@
+MessageId
+Type
+EventTime
+MessageDescription
+Email
+DeviceId
+SubType
+SerialNumber

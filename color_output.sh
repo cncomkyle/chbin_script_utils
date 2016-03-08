@@ -21,6 +21,8 @@ sed_color_end_str="\\\033[0m"
 tmp_xml_start='<?xml version="1.0" encoding='
 tmp_xml_end="<\/[^\/][^\/]*:Envelope>"
 
+xml_key_ele_name_list_file="${shell_util_dir}/xml_key_ele_name_list.txt"
+xml_key_ele_name_list=""
 #===function methods==========
 function getColorStr()
 {
@@ -137,66 +139,63 @@ function getXmlMatchKeyEleName()
     local tmp_xml_line_str="$1"
     local tmp_xml_match_key_list="$2"
 
-    local tmp_xml_ele_name=$(printf "%s\n" "${tmp_xml_line_str}" | sed -n -e 's/xx//g;p;')
+    local tmp_xml_ele_name=$(
+        printf "%s\n" "${tmp_xml_line_str}" | \
+        sed -n -e 's/.*<[^\/:][^\/:]*:\([a-zA-Z0-9_]*\).*/\1/gp;'
+    )
+
+    if [ -z "${tmp_xml_ele_name}" ]  
+    then
+        return 1
+    fi
+
+
+    if regMatchCheck "#${tmp_xml_match_key_list}#" "#${tmp_xml_ele_name}#" > /dev/null
+    then
+        printf "%s\n" "${tmp_xml_ele_name}"
+        return 0
+    fi
+
+    printf "\n"
+    return 1
 }
 
-function highlight_xml_str()
+function highlight_xml_line_str()
 {
-    # set -x
     local tmp_origin_xml_str="$1"
-    
-    local old_xml_key_ele_name_list="#MessageId#Type#EventTime#MessageDescription#Email#DeviceId#SubType#SerialNumber"
-    # local old_xml_key_ele_name_list=""
-    local xml_key_ele_name_list=$(printf "%s\n" "${old_xml_key_ele_name_list}" | awk -F '#' '{for(i=1;i<=NF;i++)print $i}')
-    # local xml_key_ele_name_list="DeviceId"
-
     local tmp_xml_key_chk_flg="0"
+
     while IFS='' read -r tmp_xml_line
     do
         tmp_xml_key_chk_flg="0"
-        
-        if [ -n "${xml_key_ele_name_list}" ]
+        tmp_xml_ele_name=""
+
+        if [ -n "${xml_key_ele_name_list}" ]  
         then
-            
-            while read -r tmp_xml_key_ele_str
-            do
-                # set -x
-                tmp_out_xml_line=$(getXmlColorLine "${tmp_xml_line}" "${tmp_xml_key_ele_str}")
-                # set +x            
+            tmp_xml_ele_name=$(
+                printf "%s\n" "${tmp_xml_line}" | \
+                sed -n -e 's/.*<[^\/:][^\/:]*:\([a-zA-Z0-9_]*\).*/\1/gp;'
+            )
 
-                if [ "$?" = "0" ]
+            if [ -n "${tmp_xml_ele_name}" ]  
+            then
+                if regMatchCheck "#${xml_key_ele_name_list}#" "#${tmp_xml_ele_name}#" > /dev/null
                 then
-                    xml_key_ele_name_list=$(printf "%s\n" "${xml_key_ele_name_list}" | sed -n -e '/'${tmp_xml_key_ele_str}'/!p')
                     tmp_xml_key_chk_flg="1"
-                    break
                 fi
-
-            done <<< "${xml_key_ele_name_list}"
+            fi
         fi
 
         if [ "${tmp_xml_key_chk_flg}" = "0" ]
         then
-            tmp_out_xml_line=$(printf "%s%s%s\n" "${bold_magenta_color}" "${tmp_xml_line}" "${color_end_str}")
+            tmp_out_xml_line=$(getColorStr "${bold_magenta_color}" "${tmp_xml_line}")
+        else
+            tmp_out_xml_line=$(getXmlColorLine "${tmp_xml_line}" "${tmp_xml_ele_name}")
         fi
         
-
-#         if regMatchCheck "${tmp_xml_line}" "<[^\/][^\/]*:DeviceId\/>" > /dev/null
-#         then
-#             local tmp_out_xml_line=$(printf "%s%s%s\n" "${bold_blue_color}" "${tmp_xml_line}" "${color_end_str}")
-#         elif regMatchCheck "${tmp_xml_line}" "<[^\/][^\/]*:DeviceId>" > /dev/null
-#         then
-#             local tmp_out_xml_line=$(printf "%s\n" "${tmp_xml_line}" | \
-# sed -n -e 's/\(<[^\/][^\/]*:DeviceId>\)\([^<][^<]*\)\(<\/[^\/][^\/]*:DeviceId>\)/\'"$(getColorStr "${bold_blue_color}" "\1" "${sed_color_end_str}")"'\'"$(getColorStr "${bold_gray_color}" "\2" "${sed_color_end_str}")"'\'"$(getColorStr "${bold_blue_color}" "\3" "${sed_color_end_str}")"'/g;p;')
-#         else
-#             local tmp_out_xml_line=$(printf "%s%s%s\n" "${bold_magenta_color}" "${tmp_xml_line}" "${color_end_str}")
-#         fi
-
         printf "%b\n" "$(get_split_lines "${tmp_out_xml_line}" "${sep_str}")"
+
     done <<< "${tmp_origin_xml_str}"
-    # set +x
-    
-    # printf "%s\n" "${tmp_origin_xml_str}" | \
-    # sed -n -e 's/\(<ch:DeviceId>.*<\/ch:DeviceId>\)/\'"$(getColorStr "${bold_blue_color}" "\1" "${sed_color_end_str}")"'/g;p;'
 }
 
 function xml_add_other_color()
@@ -277,9 +276,9 @@ function xml_format_log_string()
         if [ "${check_rlt}" = "1"  ] 
         then
             tmp_out_xml_str=$(printf "%s\n" "$tmp_line" | xmllint --format -)
-            # tmp_out_xml_str=$(highlight_xml_str "${tmp_out_xml_str}")
+            highlight_xml_line_str "${tmp_out_xml_str}"
 
-            highlight_xml_str "${tmp_out_xml_str}"
+            # tmp_out_xml_str=$(highlight_xml_str "${tmp_out_xml_str}")
             # tmp_out_str=$(xml_add_other_color  "${tmp_out_xml_str}")
             # tmp_out_str=$(get_split_lines "${tmp_out_str}" "${sep_str}")
         else
@@ -443,13 +442,35 @@ function color_log_line_old()
 
 function color_log()
 {
+    # local opt_str="nf:"
+    # while getopts "${opt_str}" tmp_opt
+    # do
+    #     case "${tmp_opt}" in
+    #         f) tmp_xml_key=$OPTARG
+    #             ;;
+    #         n) tmp_x="1"
+    #             ;;
+    #         *) return 1;;
+    #     esac
+    # done
+
+    # printf "%s\n" "$OLDPWD"
+    # return 0
+
+    if [ -e "${xml_key_ele_name_list_file}" ]
+    then
+        xml_key_ele_name_list=$(
+            cat "${xml_key_ele_name_list_file}" | \
+            sed -n -e '/^#/!p' | \
+            awk '{printf"%s#",$0}END{printf"\n"}'
+        )
+    fi
+
     local log_file_path="$1"
-    # tail -fn 100 "${log_file_path}" | \
-    # awk '{printf"%s%s%s",begin_str,$1,end_str;for(i=2;i<=NF;i++)printf" %s",$i;printf"\n"}' begin_str="\033[1;31m" end_str="\033[0m"
 
     if [ -n "${log_file_path}" ]
     then
-        tail -fn 500 "${log_file_path}" | \
+        tail -fn "${log_file_path}" | \
         color_log_line
     else
         color_log_line
