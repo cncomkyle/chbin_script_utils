@@ -39,6 +39,16 @@ function getColorStr()
     printf "%s%s%s\n" "${color_value}" "${origin_str}" "${end_str}"
 }
 
+function getSedColorStr()
+{
+    local color_value="\\$1"
+    local origin_str="$2"
+
+    local end_str="\\${color_end_str}"
+    
+    printf "%s\n" "$(getColorStr "${color_value}" "${origin_str}" "${end_str}")"
+}
+
 function regMatchCheck()
 {
     local checkStr="$1"
@@ -122,11 +132,12 @@ function getXmlColorLine()
     if  regMatchCheck "${tmp_origin_xml_line}" "<[^\/][^\/]*:${tmp_xml_ele_str}>" > /dev/null
     then
         printf "%s\n" "${tmp_origin_xml_line}" | \
-        sed -n -e 's/\(<[^\/][^\/]*:'"${tmp_xml_ele_str}"'>\)\([^<][^<]*\)\(<\/[^\/][^\/]*:'"${tmp_xml_ele_str}"'>\)/\'"$(getColorStr "${bold_blue_color}" "\1" "${sed_color_end_str}")"'\'"$(getColorStr "${bold_gray_color}" "\2" "${sed_color_end_str}")"'\'"$(getColorStr "${bold_blue_color}" "\3" "${sed_color_end_str}")"'/g;p;'
+        sed -n -e 's/\(<[^\/][^\/]*:'"${tmp_xml_ele_str}"'>\)\([^<][^<]*\)\(<\/[^\/][^\/]*:'"${tmp_xml_ele_str}"'>\)/'"$(getSedColorStr "${bold_blue_color}" "\1" )""$(getSedColorStr "${bold_gray_color}" "\2")""$(getSedColorStr "${bold_blue_color}" "\3")"'/g;p;'
         return 0
     elif  regMatchCheck "${tmp_origin_xml_line}" "<[^\/][^\/]*:${tmp_xml_ele_str}\/>" > /dev/null
     then
-        printf "%s%s%s\n" "${bold_blue_color}" "${tmp_xml_line}" "${color_end_str}"
+        printf "%s\n" "${tmp_origin_xml_line}" | \
+        sed -n -e 's/\(<[^\/][^\/]*:'"${tmp_xml_ele_str}"'\/>\)/'"$(getSedColorStr "${bold_blue_color}" "\1")"'/g;p;'
         return 0
     fi
 
@@ -575,7 +586,7 @@ function getColorVarList()
     
     # print header string
     local l_header_line=$(printf "${l_print_fmt}" "No." "Color_Name." "Color_Value." | \
-    sed -n -e 's/\([a-zA-Z_\.][a-zA-Z\.]*\)/\'"$(getColorStr "${bold_cyan_color}" "\1" "${sed_color_end_str}")"'/g;p;' )
+    sed -n -e 's/\([a-zA-Z_\.][a-zA-Z\.]*\)/'"$(getSedColorStr "${bold_cyan_color}" "\1")"'/g;p;' )
 
     printf "%b\n" "${l_header_line}"
 
