@@ -470,7 +470,7 @@ function color_log()
 
     if [ -n "${log_file_path}" ]
     then
-        tail -fn "${log_file_path}" | \
+        tail -fn 1000 "${log_file_path}" | \
         color_log_line
     else
         color_log_line
