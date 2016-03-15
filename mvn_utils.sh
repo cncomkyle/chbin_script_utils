@@ -20,6 +20,29 @@ function mvnDepJarList()
     printf "%b\n" "${mvn_dep_jar_list}"
 }
 
+function copyMVNDepJars()
+{
+    local cp_dest_folder_path="$1"
+
+    if [ -z "${cp_dest_folder_path}" ]  
+    then
+        printf "Please input the cp dest folder path!\n"
+        return 1
+    fi
+
+    if [ ! -e "${cp_dest_folder_path}" ]
+    then
+        printf "Invalid path %s\n" "${cp_dest_folder_path}"
+        return 1
+    fi
+
+    mvnDepJarList | \
+    remove_color | \
+    xargs -n1 -I{} bash -c "cp -f {}  ${cp_dest_folder_path}"
+
+    printf "Finish copy all MVN Dependent Jar file into %b, please view it.\n"  "$(cd ${cp_dest_folder_path};pwd | color_file_path)"
+}
+
 function genStrFromPattern()
 {
     local pattern_string="$1"
@@ -551,8 +574,8 @@ function getGCHSampleProject()
     esac
 }
 
-
 export -f mvnDepJarList
+export -f copyMVNDepJars
 export -f genStrFromPattern
 export -f checkISNum
 export -f getArrayItemValue
@@ -567,5 +590,3 @@ export -f getGCHComponentVersionList
 export -f getGCHVersion
 export -f getGCHPublishType
 export -f getGCHSampleProject
-
-
