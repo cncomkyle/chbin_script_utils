@@ -6,3 +6,11 @@ Email
 DeviceId
 SubType
 SerialNumber
+Series
+Name
+Contact
+ContactEmail
+Model
+HardwareVersion
+
+
