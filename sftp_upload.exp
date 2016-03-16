@@ -41,6 +41,8 @@ spawn  sftp $user_name@sha-vde-store5:/$user_name
 expect "assword"
 send "$user_pwd\r"
 
+# TODO add check to verify the password validation
+
 putFile "$upload_file_name"
 
 expect "sftp>"

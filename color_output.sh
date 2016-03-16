@@ -132,7 +132,7 @@ function getXmlColorLine()
     if  regMatchCheck "${tmp_origin_xml_line}" "<[^\/][^\/]*:${tmp_xml_ele_str}>" > /dev/null
     then
         printf "%s\n" "${tmp_origin_xml_line}" | \
-        sed -n -e 's/\(<[^\/][^\/]*:'"${tmp_xml_ele_str}"'>\)\([^<][^<]*\)\(<\/[^\/][^\/]*:'"${tmp_xml_ele_str}"'>\)/'"$(getSedColorStr "${bold_blue_color}" "\1" )""$(getSedColorStr "${bold_gray_color}" "\2")""$(getSedColorStr "${bold_blue_color}" "\3")"'/g;p;'
+        sed -n -e 's/\(<[^\/][^\/]*:'"${tmp_xml_ele_str}"'>\)\([^<][^<]*\)\(<\/[^\/][^\/]*:'"${tmp_xml_ele_str}"'>\)/'"$(getSedColorStr "${bold_blue_color}" "\1" )""$(getSedColorStr "${bold_yellow_color}" "\2")""$(getSedColorStr "${bold_blue_color}" "\3")"'/g;p;'
         return 0
     elif  regMatchCheck "${tmp_origin_xml_line}" "<[^\/][^\/]*:${tmp_xml_ele_str}\/>" > /dev/null
     then
@@ -349,7 +349,7 @@ function color_log_line()
         then
            
             ## valid format log msg
-            log_thread=$(getColorStr "${bold_gray_color}" "${log_thread}")
+            log_thread=$(getColorStr "${bold_yellow_color}" "${log_thread}")
             log_date_time=$(getColorStr "${light_magenta_color}" "${log_date} ${log_time}")
             log_class_method="$(color_class_method "${log_class_method}")"
             log_line=$(getColorStr "${bold_magenta_color}" "${log_line_start} ${log_line_end}")

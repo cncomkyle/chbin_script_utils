@@ -189,7 +189,7 @@ function getSelectOptionValue()
     local tmp_case_str="^[1-9]*$"
 
 
-    while TRUE
+    while [ "1" = "1"  ]
     do
         local tmp_chk_flg="0"
         read -e -p "${tmp_prompt_str}" tmp_select_opt_no
@@ -510,7 +510,7 @@ function getGCHSampleProject()
 
     # step 1: select gch_type
     local tmp_steps_finish_flg="0"
-    while TRUE
+    while [ "1" = "1" ]
     do
 
         tmp_gch_type_no=$(
@@ -524,7 +524,7 @@ function getGCHSampleProject()
         fi
         
         # step 2: selet gch_publish_type: release or snapshot
-        while TRUE
+        while [ "1" = "1" ]
         do
             tmp_step_hint_str="GCH_Type:$(getArrayItemValue "gch_type" "${tmp_gch_type_no}")"
             tmp_publish_type=$(getGCHPublishType "${tmp_step_hint_str}")
