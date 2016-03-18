@@ -511,7 +511,7 @@ function color_sed()
     fi
 
     # printf "%s\n" "${reg_pattern_str}"
-    while read -r tmp_line
+    while IFS='' read -r tmp_line
     do
         # printf "%s\n" "${tmp_line}" | \
         # sed -n -e '/'"${reg_pattern_str}"'/{
@@ -538,7 +538,7 @@ function color_sed()
         if [ -n "${tmp_rlt}" ] 
         then
             echo -e "${tmp_rlt}"
-            # printf "%s\n" "${tmp_rlt}" | 
+            # printf "%b\n" "${tmp_rlt}" 
         fi
     done
 }
