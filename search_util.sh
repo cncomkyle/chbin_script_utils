@@ -24,6 +24,15 @@ function searchSingleFile()
         awk -F '##' '{printf"%s %s\n",$2,$1}'
     )
 
+
+    l_rlt=$(
+        cat -n "${l_file_path}" | \
+        sed -n -e 's/^\([[:blank:]]*\)\([1-9][0-9]*\)\([[:blank:]][[:blank:]]*\)\(.*\)/\4##Line[\2]:/g;;p;' | \
+        sed -n -e '/'"${l_match_str}"'/p' | \
+        color_sed "${l_match_str}" | \
+        awk -F '##' '{printf"%s %s\n",$2,$1}'
+    )
+
     if [ -z "${l_rlt}" ]  
     then
         return 0
@@ -135,6 +144,13 @@ function searchFileStr()
         
         let l_exclude_path_idx=$l_exclude_path_idx+1
     done
+
+    if [ -z "${l_search_files}" ]  
+    then
+        printf "Cannot find any file after exclude specified folder names!\n"
+        return 1
+    fi
+
 
     local tmp_idx=0
     while read -r tmp_file_path_new

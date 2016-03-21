@@ -531,13 +531,15 @@ function color_sed()
             printf "%s\n" "${tmp_line}" | \
             sed -n -e '/'"${reg_pattern_str}"'/{
                 s/\('"${reg_pattern_str}"'\)/'$(getColorStr "${sed_bold_white_red_color}" "\1" "${sed_color_end_str}")'/g;
+                s/\\n/###/g;
                 p;
             }'
         )
 
         if [ -n "${tmp_rlt}" ] 
         then
-            echo -e "${tmp_rlt}"
+            echo -e "${tmp_rlt}" | \
+            sed -n -e 's/###/\\n/g;p;'
             # printf "%b\n" "${tmp_rlt}" 
         fi
     done
