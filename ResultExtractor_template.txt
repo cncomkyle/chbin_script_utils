@@ -1,0 +1,19 @@
+	private class  $tbl_class_nmResultExtractor 
+		implements ResultSetExtractor<$tbl_class_nm> {
+		@Override
+		public $tbl_class_nm extractData(ResultSet result) {
+			$tbl_class_nm $tbl_ins_nm = null;
+			try {
+				if(result.next()) {
+					$tbl_ins_nm = new $tbl_class_nm();
+					$tbl_ins_nm.setSolutionId(result.getInt("solution_id"));
+					$tbl_ins_nm.setKeystrId(result.getInt("keystr_id"));
+					$tbl_ins_nm.setBeginStepId(result.getInt("begin_step_id"));
+					$tbl_ins_nm.setKeyStr(result.getString("key_str"));
+				}
+			} catch(Exception e) {
+				$tbl_ins_nm = null;
+			}
+			return $tbl_ins_nm;
+		}
+	}

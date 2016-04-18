@@ -12,5 +12,7 @@ Contact
 ContactEmail
 Model
 HardwareVersion
+Question
+SessionID
 
 

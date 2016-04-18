@@ -1,0 +1,103 @@
+/**
+ * 
+ */
+package com.callhome.sda.dao;
+
+import java.sql.ResultSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.jdbc.core.ResultSetExtractor;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.simple.ParameterizedBeanPropertyRowMapper;
+
+import com.callhome.sda.beans.$tbl_class_name;
+
+/**
+ * @author chbin
+ *
+ */
+public class $tbl_class_nameDao {
+	
+	private class  $tbl_class_nameResultExtractor 
+		implements ResultSetExtractor<$tbl_class_name> {
+		@Override
+		public $tbl_class_name extractData(ResultSet result) {
+			$tbl_class_name sdaSolutionKeystrs = null;
+			try {
+				if(result.next()) {
+					sdaSolutionKeystrs = new $tbl_class_name();
+					sdaSolutionKeystrs.setSolutionId(result.getInt("solution_id"));
+					sdaSolutionKeystrs.setKeystrId(result.getInt("keystr_id"));
+					sdaSolutionKeystrs.setBeginStepId(result.getInt("begin_step_id"));
+					sdaSolutionKeystrs.setKeyStr(result.getString("key_str"));
+				}
+			} catch(Exception e) {
+				sdaSolutionKeystrs = null;
+			}
+			return sdaSolutionKeystrs;
+		}
+	}
+	
+	/**
+     * Describe namedParamTemplate here.
+     */
+    private NamedParameterJdbcTemplate namedParamTemplate;
+    
+    private static String getSolutionK6eystrList_sql() {
+		StringBuilder sqlBuilder = new StringBuilder();
+		sqlBuilder.append("select keystr_id").append("\n");
+		sqlBuilder.append("      ,solution_id").append("\n");
+		sqlBuilder.append("      ,key_str").append("\n");
+		sqlBuilder.append("      ,begin_step_id").append("\n");
+		sqlBuilder.append("  from sda_solution_keystrs ssk").append("\n");
+		return sqlBuilder.toString();
+	}
+
+	@Override
+	public List<$tbl_class_name> getSolutionKeystrList() {
+		Map<String, Object> params = new HashMap<String, Object>();
+		return this.namedParamTemplate.query(
+				getSolutionKeystrList_sql()
+				, params
+				, ParameterizedBeanPropertyRowMapper.newInstance($tbl_class_name.class));
+	}
+	
+	 
+	 private static String getMatchedSolution_sql() {
+		    StringBuilder sqlBuilder = new StringBuilder();
+		    sqlBuilder.append("select keystr_id").append("\n");
+		    sqlBuilder.append("       ,solution_id").append("\n");
+		    sqlBuilder.append("       ,key_str").append("\n");
+		    sqlBuilder.append("       ,begin_step_id").append("\n");
+		    sqlBuilder.append("  from sda_solution_keystrs ssk").append("\n");
+		    sqlBuilder.append(" where ssk.key_str = :key_str").append("\n");
+		    return sqlBuilder.toString();
+		}
+	
+	@Override
+	public $tbl_class_name getMatchedSolution(String keystr) {
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("key_str", keystr);
+		return this.namedParamTemplate.query(
+				getMatchedSolution_sql()
+				, params
+				, new $tbl_class_nameResultExtractor());
+	}
+
+	/**
+	 * @return the namedParamTemplate
+	 */
+	public NamedParameterJdbcTemplate getNamedParamTemplate() {
+		return namedParamTemplate;
+	}
+
+	/**
+	 * @param namedParamTemplate the namedParamTemplate to set
+	 */
+	public void setNamedParamTemplate(NamedParameterJdbcTemplate namedParamTemplate) {
+		this.namedParamTemplate = namedParamTemplate;
+	}
+
+}

@@ -258,6 +258,7 @@ function xml_format_log_string()
 
     local combine_one_line=$(
         printf "%s\n" "${tmp_log_str}" | \
+        sed -n -e '/^[[:blank:]]*$/d;p;' | \
         awk '{printf"%s%s",$0,sep_str}' sep_str="${sep_str}"
     )
 
@@ -280,13 +281,19 @@ function xml_format_log_string()
 
     # return 0
 
-    while read -r tmp_line
+    while IFS='' read -r tmp_line
     do
         check_rlt=$(is_xml_line "${tmp_line}" "${tmp_xml_start}")
 
         if [ "${check_rlt}" = "1"  ] 
         then
+            tmp_line=$(
+                printf "%s\n" "${tmp_line}" | \
+                sed -n -e 's/>[[:blank:]]*'"${sep_str}"'[[:blank:]]*</></g;p;' | \
+                sed -n -e '/^$/d;p;'
+            )
             tmp_out_xml_str=$(printf "%s\n" "$tmp_line" | xmllint --format -)
+
             highlight_xml_line_str "${tmp_out_xml_str}"
 
             # tmp_out_xml_str=$(highlight_xml_str "${tmp_out_xml_str}")
