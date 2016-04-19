@@ -10,7 +10,7 @@ bold_gray_color="\033[1;90m"
 
 light_magenta_color="\033[95m"
 
-bold_white_red_color="\033[1;97;5;41m"
+bold_white_red_color="\033[1;97;41m"
 bold_yellow_blue_color="\033[1;33;104m"
 color_end_str="\033[0m"
 
@@ -377,6 +377,41 @@ function color_log_line()
     done
 }
 
+function sda_color_log_line()
+{
+    local tmp_print_log_line
+    while IFS='' read -r tmp_sda_log_line
+    do
+        if regMatchCheck "${tmp_sda_log_line}" "^[[:blank:]]*INFO" > /dev/null
+        then
+            # log header line
+            tmp_print_log_line=$(
+                getColorStr "${bold_blue_color}" "${tmp_sda_log_line}"
+            )
+        else
+            # log message
+            if regMatchCheck "${tmp_sda_log_line}" "^>>>" > /dev/null
+            then
+                tmp_print_log_line=$(
+                    getColorStr "${bold_white_red_color}" "${tmp_sda_log_line}"
+                )
+            elif regMatchCheck "${tmp_sda_log_line}" "^<<<" > /dev/null
+            then
+                tmp_print_log_line=$(
+                    getColorStr "${bold_yellow_blue_color}" "${tmp_sda_log_line}"
+                )
+            else
+                tmp_print_log_line=$(
+                    getColorStr "${bold_magenta_color}" "${tmp_sda_log_line}"
+                )
+            fi
+
+        fi
+
+        printf "%b\n" "${tmp_print_log_line}"
+    done
+}
+
 
 function color_log_line_new()
 {
@@ -495,6 +530,21 @@ function color_log()
     fi
 }
 
+function sda_color_log()
+{
+    local log_file_path="$1"
+
+    if [ -n "${log_file_path}" ]
+    then
+        tail -fn 1000 "${log_file_path}" | \
+        sda_color_log_line
+    else
+        sda_color_log_line
+    fi
+}
+
+
+
 
 function cat_log()
 {
@@ -503,9 +553,9 @@ function cat_log()
     if [ -n "${log_file_path}" ]
     then
         cat "${log_file_path}" | \
-        color_log_line
+        color_log_sda_line
     else
-        color_log_line
+        color_log_sda_line
     fi
 }
 
