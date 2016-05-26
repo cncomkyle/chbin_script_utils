@@ -272,6 +272,7 @@ function xml_format_log_string()
 
     local tmp_xml_str=$(
         printf "%s\n" "${combine_one_line}" | \
+        sed -n -e 's/\(<!\[CDATA\[<\?xml\)/\1  /g;p;' | \
         sed -n -e 's/\(.*\)'"${tmp_xml_start}"'\(.*\)\('"${tmp_xml_end}"'\)\(.*\)/\1'"${xml_sep_str}${tmp_xml_start}"'\2\3'"${xml_sep_str}"'\4/g;p;' | \
         sed -n -e 's/^'"${xml_sep_str}"'//g;p;' | \
         awk -F ''${xml_sep_str}'' '{for(i=1;i<=NF;i++)print $i}'
@@ -694,6 +695,145 @@ function getColorVarList_old()
 
 }
 
+function getEventXMLEleList()
+{
+    local tmp_file_path="$1"
+    
+    local tmp_ch_eles[1]="ch:EventTime"
+    local tmp_ch_eles[2]="ch:Type"
+    local tmp_ch_eles[3]="ch:SubType"
+    local tmp_ch_eles[4]="ch:Name"
+    local tmp_ch_eles[5]="ch:Contact"
+
+    local tmp_sed_str_part_1=""
+    local tmp_sed_str_part_2=""
+    local tmp_str1=""
+    local tmp_str2=""
+    local tmp_index=0
+    local tmp_color_str=""
+    local tmp_ele=""
+
+    local tmp_sep_line="********************************************************************************"
+
+    for tmp_ele in "${tmp_ch_eles[@]}"
+    do
+
+        tmp_str1="h;s/.*\(<${tmp_ele}>\)\(.*\)\(<\/${tmp_ele}>\).*/$(getSedColorStr "${bold_blue_color}" "\1")$(getSedColorStr "${bold_yellow_color}" "\2")$(getSedColorStr "${bold_blue_color}" "\3") ##/gp;x;"
+        tmp_str2="h;s/.*\(<${tmp_ele}\/>\).*/$(getSedColorStr "${bold_white_red_color}" "\1")##/p;x;"
+        tmp_sed_str_part_1="${tmp_sed_str_part_1}${tmp_str1}${tmp_str2}"
+
+        tmp_color_str="${tmp_color_str}color_sed ${tmp_ele} | "
+    done
+
+    local tmp_sed_cmd_str="printf \"%b\\n\" \"\$(sed -n -e '{${tmp_sed_str_part_1}}')\" | awk '{printf\"%s\",\$0}END{printf\"\\n\"}' | awk -F '##' '{for(i=1;i<=NF;i++)print \$i}' "
+
+    # printf "%s\n" "${tmp_sed_cmd_str}"
+    # return 0
+
+    while read -r tmp_line
+    do
+        local tmp_cmd="printf \"%s\\n\" \"${tmp_line}\" | ${tmp_sed_cmd_str}"
+        # printf "%s\n" "${tmp_cmd}"
+        local tmp_rlt_str=$(
+            eval "${tmp_cmd}"
+        )
+
+        if [ -n "${tmp_rlt_str}" ]
+        then
+            let tmp_index=$tmp_index+1
+            printf "%s\n[%s]\n%s\n" "${tmp_sep_line}" "${tmp_index}" "${tmp_rlt_str}"
+        fi
+    done
+    
+}
+
+function getMissNumber()
+{
+    local tmp_expect_num="$1"
+    local tmp_check_numbers=""
+    
+    while read -r tmp_line
+    do
+        tmp_check_numbers=$(
+            printf "%s\n%s\n" "${tmp_check_numbers}" "${tmp_line}"
+        )
+    done
+
+    printf "%s\n" "${tmp_check_numbers}" | \
+    sed -n -e '/^$/d;p;' | \
+    sed -n -e 's/.*chbin\(.*\)@cisco.com/\1/g;p;' | \
+    awk 'BEGIN{current=1;start=1;}{current=int($0);while(start<current){print start++}start++;}END{while(start<=end){print start++}}' end="${tmp_expect_num}"
+}
+
+function getEventXMLEleList_old()
+{
+    local tmp_file_path="$1"
+    
+    local tmp_ch_eles[1]="ch:EventTime"
+    local tmp_ch_eles[2]="ch:Type"
+    local tmp_ch_eles[3]="ch:SubType"
+    local tmp_ch_eles[4]="ch:Name"
+    local tmp_ch_eles[5]="ch:Contact"
+
+    local tmp_sed_str_part_1=""
+    local tmp_sed_str_part_2=""
+    local tmp_str1=""
+    local tmp_str2=""
+    local tmp_index=0
+    local tmp_color_str=""
+    local tmp_ele=""
+
+    for tmp_ele in "${tmp_ch_eles[@]}"
+    do
+        let tmp_index=$tmp_index+1
+        tmp_str1=$(
+            printf ".*\(<%s>.*<\/%s>\).*\n"  "${tmp_ele}" "${tmp_ele}"
+        )
+        tmp_str2=$(
+            printf "\\%d##\n" "${tmp_index}"
+        )
+
+        if [ "${tmp_ele}" = "ch:SubType" ] 
+        then
+            tmp_str1=$(
+                printf "%s\(<%s\>\).*\n"  "${tmp_str1}" "${tmp_ele}"
+            )
+            let tmp_index=$tmp_index+1
+            tmp_str2=$(
+                printf "%s\\%d##\n" "${tmp_str2}" "${tmp_index}"
+            )
+        fi
+        tmp_sed_str_part_2="${tmp_sed_str_part_2}${tmp_str2}"
+        tmp_sed_str_part_1="${tmp_sed_str_part_1}${tmp_str1}"
+        tmp_color_str="${tmp_color_str}color_sed ${tmp_ele} | "
+    done
+
+    local tmp_sed_cmd_str=$(
+        printf "sed -n -e 's/%s/%s/g;p;' | %s awk -F '##' '{for(i=1;i<=NF;i++)print\$i}' \n" "${tmp_sed_str_part_1}" "${tmp_sed_str_part_2}" "${tmp_color_str}"
+    )
+
+    printf "%s\n" "${tmp_sed_cmd_str}"
+    # return 0
+
+    while read -r tmp_line
+    do
+        tmp_cmd="printf \"%s\\n\" \"${tmp_line}\" | ${tmp_sed_cmd_str}"
+        # printf "%s\n" "${tmp_cmd}"
+        eval "${tmp_cmd}"
+    done
+    
+}
+
+function printFile()
+{
+    local print_file_path="$1"
+
+    while FS='' read -r tmp_line
+    do
+        printf "%s\n" "${tmp_line}"
+    done < "${print_file_path}"
+}
+
 #=== export section : used to export these function==========
 export -f getColorStr
 export -f regMatchCheck
@@ -711,3 +851,4 @@ export -f cat_log
 export -f color_sed
 export -f remove_color
 export -f color_file_path
+export -f getEventXMLEleList
