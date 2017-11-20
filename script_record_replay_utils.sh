@@ -115,12 +115,11 @@ function genReplayScript()
         then
             local tmp_empty_check_rlt=$(
                 printf "%s\n" "${nextLineStr}" | \
-                sed -n -e '/^'"${tmp_head_str}"'#/p'
+                sed -n -e '/^'"${tmp_head_str}"'[^#]*#$/p'
             )
 
             if [ -n "${tmp_empty_check_rlt}" ]
             then
-                
                 continue
             fi
         fi

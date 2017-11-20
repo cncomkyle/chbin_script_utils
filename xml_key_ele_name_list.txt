@@ -1,4 +1,5 @@
 MessageId
+Severity
 Type
 EventTime
 MessageDescription

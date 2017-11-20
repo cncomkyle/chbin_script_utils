@@ -23,6 +23,8 @@ tmp_xml_end="<\/[^\/][^\/]*:Envelope>"
 
 xml_key_ele_name_list_file="${shell_util_dir}/xml_key_ele_name_list.txt"
 xml_key_ele_name_list=""
+
+sep_str="###"
 #===function methods==========
 function getColorStr()
 {
@@ -248,7 +250,7 @@ function xml_add_other_color()
 function xml_format_log_string()
 {
     local tmp_log_str="$1"
-    sep_str="###"
+
     local xml_sep_str="@@@"
 
     if [ -z "${tmp_log_str}" ]
@@ -272,7 +274,7 @@ function xml_format_log_string()
 
     local tmp_xml_str=$(
         printf "%s\n" "${combine_one_line}" | \
-        sed -n -e 's/\(<!\[CDATA\[<\?xml\)/\1  /g;p;' | \
+        sed -n -e 's/\(<!\[CDATA\[<?xml\)/\1'"  "'/g;p;' | \
         sed -n -e 's/\(.*\)'"${tmp_xml_start}"'\(.*\)\('"${tmp_xml_end}"'\)\(.*\)/\1'"${xml_sep_str}${tmp_xml_start}"'\2\3'"${xml_sep_str}"'\4/g;p;' | \
         sed -n -e 's/^'"${xml_sep_str}"'//g;p;' | \
         awk -F ''${xml_sep_str}'' '{for(i=1;i<=NF;i++)print $i}'
@@ -345,6 +347,54 @@ function macro_print_log_line()
 
 }
 
+function xml_format_non_gch_event_msg()
+{
+
+    local tmp_log_str="${pre_log_str}"
+    local tmp_combine_one_line=$(
+        printf "%s\n" "${tmp_log_str}" | \
+        sed -n -e '/^[[:blank:]]*$/d;p;' | \
+        awk '{printf"%s%s",$0,sep_str}' sep_str="${sep_str}"
+    )
+
+    find_xml_flg="0"
+    pre_log_str=""
+
+    if [ $(is_xml_line "${tmp_combine_one_line}" "${tmp_xml_start}") = "0" ]
+    then
+        printf "%s\n" "${tmp_log_str}"
+        return 0
+    fi
+    local xml_sep_str="#"
+    local tmp_xml_str="$(
+        printf "%s\n" "${tmp_combine_one_line}" | \
+        sed -n -e 's/\(.*\)\('"${tmp_xml_start}"'.*<\/[^\/>][^\/>]*>\)\(.*\)/\1'"${xml_sep_str}"'\2'"${xml_sep_str}"'\3/g;p;'
+    )"
+
+    # printf "%s\n" "${tmp_xml_str}"
+    # return 0
+
+    while IFS="${xml_sep_str}" read -r tmp_head_part tmp_xml_part tmp_tail_part
+    do
+        local tmp_out_str=$(getColorStr "${bold_cyan_color}" "$(get_split_lines "${tmp_head_part}" "${sep_str}")")
+        printf "%b\n" "${tmp_out_str}"
+        # printf "%s\n" "${tmp_head_part}"
+        local tmp_out_xml_str="$(printf "%s\n" "${tmp_xml_part}" | xmllint --format -)"
+        # highlight_xml_line_str "${tmp_out_xml_str}"
+        tmp_out_xml_str="$(
+            getColorStr "${bold_magenta_color}" "${tmp_out_xml_str}"
+        )"
+        printf "%b\n" "${tmp_out_xml_str}"
+        # printf "%b\n" "$(get_split_lines "${tmp_out_xml_line}" "${sep_str}")"
+
+        tmp_out_str=$(getColorStr "${bold_cyan_color}" "$(get_split_lines "${tmp_tail_part}" "${sep_str}")")
+        # tmp_out_str="$(get_split_lines "${tmp_tail_part}" "${sep_str}")"
+        printf "%b\n" "${tmp_out_str}"
+        break;
+    done <<< "${tmp_xml_str}"
+
+}
+
 function color_log_line()
 {
     local pre_log_str=""
@@ -352,9 +402,14 @@ function color_log_line()
     while read -r log_level log_thread log_date log_time log_class_method log_line_start log_line_end log_string
     do
         new_log_level=$(color_log_level "${log_level}")
-       
+
         if [ -n "${new_log_level}" ]
         then
+            # deal with previous unprint xml data which is the call home event xml message
+            if [ "${find_xml_flg}" = "1"  ]
+            then
+                xml_format_non_gch_event_msg
+            fi
            
             ## valid format log msg
             log_thread=$(getColorStr "${bold_yellow_color}" "${log_thread}")
@@ -367,7 +422,13 @@ function color_log_line()
             eval "macro_print_log_line"
         else
             log_string="${log_level} ${log_thread} ${log_date} ${log_time} ${log_class_method} ${log_line_start} ${log_line_end} ${log_string}"
+            log_string=$(
+                printf "%s\n" "${log_string}" | \
+                sed -n -e 's/'"$(printf "%b" "\r")"'//g;p;' | \
+                sed -n -e 's/[[:blank:]][[:blank:]][[:blank:]]*/ /g;p;'
+            )
 
+            # printf "%s\n" "${log_string}"
             if [ "${find_xml_flg}" = "1" ]
             then
                 eval "macro_xml_end_check"
@@ -525,6 +586,7 @@ function color_log()
     if [ -n "${log_file_path}" ]
     then
         tail -fn 1000 "${log_file_path}" | \
+        sed -n -e 's/Test worker/Test_worker/g;p;' | \
         color_log_line
     else
         color_log_line
@@ -824,16 +886,42 @@ function getEventXMLEleList_old()
     
 }
 
-function printFile()
+function strPatternHighlight()
 {
-    local print_file_path="$1"
+    local tmp_str_patterns="$#"
 
-    while FS='' read -r tmp_line
+    if [ "${tmp_str_patterns}" -eq 0 ]
+    then
+        printf "Please input the Highlight Pattern Strings!\n"
+        return 1
+    fi
+
+    local tmp_str_pattern_list=$(printf "%s\n" $@)
+
+    ## build the sed color match string
+    local tmp_sed_strs=""
+    while read -r tmp_pattern
     do
-        printf "%s\n" "${tmp_line}"
-    done < "${print_file_path}"
-}
+        # printf "%s\n" "${tmp_pattern}"
+        tmp_sed_strs="${tmp_sed_strs}s/\(${tmp_pattern}\)/$(getSedColorStr ${bold_white_red_color} "\1")/g;"
+    done <<< "${tmp_str_pattern_list}"
+    # "$(printf "%s\n" "${tmp_str_patterns}" | awk '{for(i=1;i<=NF;i++)print $i}')"
 
+    # printf "%s\n" "${tmp_sed_strs}"
+
+    while IFS='' read -r tmp_line
+    do
+        tmp_line=$(
+            printf "%s\n" "${tmp_line}" | sed -n -e 's/\($[1-9]\)/\\\1/g;p;'
+        )
+        local tmp_cmd="printf \"%b\n\" \"\$(printf \"%s\n\" \""${tmp_line}"\" | sed -n -e '"${tmp_sed_strs}"p;')\""
+        # printf "%s\n" "${tmp_cmd}"
+        eval "${tmp_cmd}"
+    done
+
+
+    
+}
 #=== export section : used to export these function==========
 export -f getColorStr
 export -f regMatchCheck

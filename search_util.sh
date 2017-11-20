@@ -16,13 +16,13 @@ function searchSingleFile()
     local l_line_num=1
     local l_line_rlt=""
 
-    l_rlt=$(
-        cat -n "${l_file_path}" | \
-        sed -n -e 's/^\([[:blank:]]*\)\([1-9][0-9]*\)\([[:blank:]][[:blank:]]*\)\(.*\)/\4##Line[\2]:/g;;p;' | \
-        sed -n -e '/'"${l_match_str}"'/p' | \
-        color_sed "${l_match_str}" | \
-        awk -F '##' '{printf"%s %s\n",$2,$1}'
-    )
+    # l_rlt=$(
+    #     cat -n "${l_file_path}" | \
+    #     sed -n -e 's/^\([[:blank:]]*\)\([1-9][0-9]*\)\([[:blank:]][[:blank:]]*\)\(.*\)/\4##Line[\2]:/g;;p;' | \
+    #     sed -n -e '/'"${l_match_str}"'/p' | \
+    #     color_sed "${l_match_str}" | \
+    #     awk -F '##' '{printf"%s %s\n",$2,$1}'
+    # )
 
 
     l_rlt=$(
@@ -159,4 +159,31 @@ function searchFileStr()
         searchSingleFile "${tmp_file_path_new}" "${l_pattern_strs[0]}"
         let tmp_idx=$tmp_idx+1
     done <<< "${l_search_files}"
+}
+
+
+## used to find the pdf book in ebook folder which name contain the searched keyword
+function searchEbookPdf()
+{
+    # 1 paramter : search keyword string:
+    local search_key_str="$1"
+
+    if [ -z "${search_key_str}" ]  
+    then
+        printf "Please input the search keyword string!\n" 
+        return 1
+    fi
+
+    find ~/ebook -type f -name '*.pdf' | \
+    sed -n -e '{
+        s/\([[:blank:]]\)/\\\\\\\1/g;
+        s/(/\\(/g;s/)/\\)/g;
+        s/'"'"'/\\\\\\\'"'"'/g;
+        p;
+    }' | \
+    awk '{cmd="greadlink -f "$0;system(cmd);close(cmd);}' | \
+    awk '{printf"%s##%s\n",$0,tolower($0)}' | \
+    sed -n -e '/'"${search_key_str}"'/p' | \
+    awk -F '##' '{print $1}'
+
 }

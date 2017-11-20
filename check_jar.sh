@@ -129,6 +129,144 @@ function getJPIDJars()
     printf "%b\n" "${tmp_rlt}"
 }
 
+function jarDiff()
+{
+    local tmp_src_jar_list_path="$1"
+    local tmp_dst_jar_list_path="$2"
+
+    if [ "$#" -ne 2 ]
+    then
+        printf "Please input {src jar list path} and {dst jar list path}\n"
+        return 1
+    fi
+
+    if [ ! -e "${tmp_src_jar_list_path}" ]
+    then
+        printf "The %s does't exist!\n" "${tmp_src_jar_list_path}"
+        return 1
+    fi
+
+    if [ ! -e "${tmp_dst_jar_list_path}" ]
+    then
+        printf "The %s does't exist!\n" "${tmp_dst_jar_list_path}"
+        return 1
+    fi
+
+    local tmp_jar_path=""
+    local tmp_check_cnt=0
+    while read -r tmp_jar_path
+    do
+        tmp_check_cnt=0
+        tmp_check_cnt=$(
+            cat "${tmp_dst_jar_list_path}" | \
+            awk '{if($0 ~ tmpPath){print $0}}' tmpPath="${tmp_jar_path}" | \
+            wc -l
+        )
+        if [ "${tmp_check_cnt}" -eq 0 ]
+        then
+            printf "%s\n" "${tmp_jar_path}"
+        fi
+    done < "${tmp_src_jar_list_path}"
+}
+
+function getAllJarClass()
+{
+    local tmp_jar_list_file_path="$1"
+
+    while read -r tmp_jar_path
+    do
+        if [ ! -e "${tmp_jar_path}" ]
+        then
+            continue
+        fi
+        getJarContent "${tmp_jar_path}"
+    done < "${tmp_jar_list_file_path}"
+}
+
+function importClassJarMatch()
+{
+    local tmp_check_class_list_file_path="$1"
+    local tmp_all_jar_class_list_file_path="$2"
+
+    while read -r tmp_check_class
+    do
+        cat "${tmp_all_jar_class_list_file_path}" | \
+        awk '{if($0 ~ check_class_name){printf"%s#%s\n",$0, check_class_name}}' check_class_name="${tmp_check_class}.class"
+    done < "${tmp_check_class_list_file_path}"
+}
+
+function fullClassNameJarMatch()
+{
+    local tmp_classNm_list_file_path="$1"
+    local tmp_all_jar_class_list_file_path="$2"
+
+    local tmp_check_classNm=""
+    while read -r tmp_check_classNm
+    do
+        tmp_check_classNm=$(
+            printf "%s\n" "${tmp_check_classNm}" | \
+            sed -n -e 's/\//\\\//g;p;'
+        )
+        cat "${tmp_all_jar_class_list_file_path}" | \
+        sed -n -e '/'"${tmp_check_classNm}"'/p'
+    done < "${tmp_classNm_list_file_path}"
+}
+
+function sameClassJarList()
+{
+    local tmp_classNm_list_file_path="$1"
+    local tmp_all_jar_class_list_file_path="$2"
+
+    local tmp_check_classNm=""
+    local tmp_jar_list=""
+    while read -r tmp_check_classNm
+    do
+        tmp_check_classNm=$(
+            printf "%s\n" "${tmp_check_classNm}" | \
+            sed -n -e 's/\//\\\//g;p;'
+        )
+        tmp_same_jar_list=$(
+            cat "${tmp_all_jar_class_list_file_path}" | \
+            sed -n -e '/'"${tmp_check_classNm}"'/p' | \
+            awk -F ':' '{print $1}' | \
+            awk -F '/' '{print $NF}'
+        )
+
+        printf "%s\n" "${tmp_same_jar_list}" | \
+        awk 'BEGIN{printf"%s::",classNm}{printf"#%s",$0}END{printf"\n"}' classNm="${tmp_check_classNm}"
+    done < "${tmp_classNm_list_file_path}"
+}
+
+
+function jarExistCheck()
+{
+    local tmp_origin_jar_list_file_path="$1"
+    local tmp_dst_jar_list_file_path="$2"
+
+    local tmp_check_jar_name=""
+
+    while read -r tmp_check_jar_name
+    do
+        cat "${tmp_dst_jar_list_file_path}" | \
+        sed -n -e 's/\('"${tmp_check_jar_name}"'\)/>**\1**</gp;'
+    done < "${tmp_origin_jar_list_file_path}"
+}
+
+
+function pidJarExistCheck()
+{
+    local tmp_origin_jar_list_file_path="$1"
+    local tmp_dst_jar_list_file_path="$2"
+
+    local tmp_check_jar_name=""
+
+    while read -r tmp_check_jar_name
+    do
+        cat "${tmp_dst_jar_list_file_path}" | \
+        sed -n -e 's/#\('"${tmp_check_jar_name}"'\)/#>**\1**</gp;'
+    done < "${tmp_origin_jar_list_file_path}"
+}
+
 export -f getJarContent
 export -f findJarClass
 export -f findJPSJar
